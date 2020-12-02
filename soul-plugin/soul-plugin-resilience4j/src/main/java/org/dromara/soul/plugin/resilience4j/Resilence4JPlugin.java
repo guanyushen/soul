@@ -39,18 +39,18 @@ import reactor.core.publisher.Mono;
 import java.util.function.Function;
 
 /**
- * Resilience4J plugin.
+ * Resilence4J plugin.
  *
  * @author zhanglei
  */
-public class Resilience4JPlugin extends AbstractSoulPlugin {
+public class Resilence4JPlugin extends AbstractSoulPlugin {
 
     private final CombinedExecutor combinedExecutor;
 
     private final RateLimiterExecutor ratelimiterExecutor;
 
-    public Resilience4JPlugin(final CombinedExecutor combinedExecutor,
-                              final RateLimiterExecutor ratelimiterExecutor) {
+    public Resilence4JPlugin(final CombinedExecutor combinedExecutor,
+                             final RateLimiterExecutor ratelimiterExecutor) {
         this.combinedExecutor = combinedExecutor;
         this.ratelimiterExecutor = ratelimiterExecutor;
     }

@@ -17,39 +17,43 @@
 
 package org.dromara.soul.admin.service.impl;
 
+import java.sql.Timestamp;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 import org.apache.commons.lang3.StringUtils;
+import org.dromara.soul.admin.dto.MetaDataDTO;
+import org.dromara.soul.admin.dto.RuleConditionDTO;
+import org.dromara.soul.admin.dto.RuleDTO;
+import org.dromara.soul.admin.dto.SelectorConditionDTO;
+import org.dromara.soul.admin.dto.SelectorDTO;
 import org.dromara.soul.admin.dto.SpringCloudRegisterDTO;
 import org.dromara.soul.admin.dto.SpringMvcRegisterDTO;
-import org.dromara.soul.admin.dto.MetaDataDTO;
-import org.dromara.soul.admin.dto.SelectorDTO;
-import org.dromara.soul.admin.dto.SelectorConditionDTO;
-import org.dromara.soul.admin.dto.RuleDTO;
-import org.dromara.soul.admin.dto.RuleConditionDTO;
 import org.dromara.soul.admin.entity.MetaDataDO;
-import org.dromara.soul.admin.entity.PluginDO;
 import org.dromara.soul.admin.entity.RuleDO;
 import org.dromara.soul.admin.entity.SelectorDO;
 import org.dromara.soul.admin.listener.DataChangedEvent;
 import org.dromara.soul.admin.mapper.MetaDataMapper;
-import org.dromara.soul.admin.mapper.PluginMapper;
 import org.dromara.soul.admin.mapper.RuleMapper;
 import org.dromara.soul.admin.mapper.SelectorMapper;
 import org.dromara.soul.admin.service.RuleService;
 import org.dromara.soul.admin.service.SelectorService;
 import org.dromara.soul.admin.service.SoulClientRegisterService;
 import org.dromara.soul.admin.transfer.MetaDataTransfer;
-import org.dromara.soul.admin.utils.SoulResultMessage;
 import org.dromara.soul.common.dto.SelectorData;
 import org.dromara.soul.common.dto.convert.DivideUpstream;
-import org.dromara.soul.common.dto.convert.selector.SpringCloudSelectorHandle;
+import org.dromara.soul.common.dto.convert.rule.DivideRuleHandle;
+import org.dromara.soul.common.dto.convert.rule.DubboRuleHandle;
+import org.dromara.soul.common.dto.convert.rule.SofaRuleHandle;
+import org.dromara.soul.common.dto.convert.rule.SpringCloudRuleHandle;
 import org.dromara.soul.common.enums.ConfigGroupEnum;
 import org.dromara.soul.common.enums.DataEventTypeEnum;
-import org.dromara.soul.common.enums.SelectorTypeEnum;
+import org.dromara.soul.common.enums.LoadBalanceEnum;
 import org.dromara.soul.common.enums.MatchModeEnum;
-import org.dromara.soul.common.enums.RpcTypeEnum;
-import org.dromara.soul.common.enums.PluginEnum;
-import org.dromara.soul.common.enums.ParamTypeEnum;
 import org.dromara.soul.common.enums.OperatorEnum;
+import org.dromara.soul.common.enums.ParamTypeEnum;
+import org.dromara.soul.common.enums.RpcTypeEnum;
+import org.dromara.soul.common.enums.SelectorTypeEnum;
 import org.dromara.soul.common.utils.GsonUtils;
 import org.dromara.soul.common.utils.JsonUtils;
 import org.dromara.soul.common.utils.UUIDUtils;
@@ -57,11 +61,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.sql.Timestamp;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
 
 /**
  * The type Soul client register service.
@@ -83,11 +82,6 @@ public class SoulClientRegisterServiceImpl implements SoulClientRegisterService 
 
     private final SelectorMapper selectorMapper;
 
-    private final PluginMapper pluginMapper;
-
-
-
-
     /**
      * Instantiates a new Meta data service.
      *
@@ -98,7 +92,6 @@ public class SoulClientRegisterServiceImpl implements SoulClientRegisterService 
      * @param ruleMapper           the rule mapper
      * @param upstreamCheckService the upstream check service
      * @param selectorMapper       the selector mapper
-     * @param pluginMapper         the plugin mapper
      */
     @Autowired(required = false)
     public SoulClientRegisterServiceImpl(final MetaDataMapper metaDataMapper,
@@ -107,8 +100,7 @@ public class SoulClientRegisterServiceImpl implements SoulClientRegisterService 
                                          final RuleService ruleService,
                                          final RuleMapper ruleMapper,
                                          final UpstreamCheckService upstreamCheckService,
-                                         final SelectorMapper selectorMapper,
-                                         final PluginMapper pluginMapper) {
+                                         final SelectorMapper selectorMapper) {
         this.metaDataMapper = metaDataMapper;
         this.eventPublisher = eventPublisher;
         this.selectorService = selectorService;
@@ -116,7 +108,6 @@ public class SoulClientRegisterServiceImpl implements SoulClientRegisterService 
         this.ruleMapper = ruleMapper;
         this.upstreamCheckService = upstreamCheckService;
         this.selectorMapper = selectorMapper;
-        this.pluginMapper = pluginMapper;
     }
 
     @Override
@@ -130,7 +121,7 @@ public class SoulClientRegisterServiceImpl implements SoulClientRegisterService 
         }
         String selectorId = handlerSpringMvcSelector(dto);
         handlerSpringMvcRule(selectorId, dto);
-        return SoulResultMessage.SUCCESS;
+        return "success";
     }
 
     @Override
@@ -142,7 +133,7 @@ public class SoulClientRegisterServiceImpl implements SoulClientRegisterService 
         }
         String selectorId = handlerSpringCloudSelector(dto);
         handlerSpringCloudRule(selectorId, dto);
-        return SoulResultMessage.SUCCESS;
+        return "success";
     }
 
     @Override
@@ -152,7 +143,7 @@ public class SoulClientRegisterServiceImpl implements SoulClientRegisterService 
         saveOrUpdateMetaData(exist, dto);
         String selectorId = handlerDubboSelector(dto);
         handlerDubboRule(selectorId, dto);
-        return SoulResultMessage.SUCCESS;
+        return "success";
     }
 
     private String handlerDubboSelector(final MetaDataDTO metaDataDTO) {
@@ -185,7 +176,7 @@ public class SoulClientRegisterServiceImpl implements SoulClientRegisterService 
         saveOrUpdateMetaData(exist, dto);
         String selectorId = handlerSofaSelector(dto);
         handlerSofaRule(selectorId, dto, exist);
-        return SoulResultMessage.SUCCESS;
+        return "success";
     }
 
     private String handlerSofaSelector(final MetaDataDTO metaDataDTO) {
@@ -336,19 +327,19 @@ public class SoulClientRegisterServiceImpl implements SoulClientRegisterService 
         selectorDTO.setContinued(Boolean.TRUE);
         selectorDTO.setSort(1);
         if (RpcTypeEnum.DUBBO.getName().equals(rpcType)) {
-            selectorDTO.setPluginId(getPluginId(PluginEnum.DUBBO.getName()));
+            selectorDTO.setPluginId("6");
         } else if (RpcTypeEnum.SPRING_CLOUD.getName().equals(rpcType)) {
-            selectorDTO.setPluginId(getPluginId(PluginEnum.SPRING_CLOUD.getName()));
-            selectorDTO.setHandle(GsonUtils.getInstance().toJson(buildSpringCloudSelectorHandle(appName)));
+            selectorDTO.setPluginId("8");
+            selectorDTO.setHandle(appName);
         } else if (RpcTypeEnum.SOFA.getName().equals(rpcType)) {
-            selectorDTO.setPluginId(getPluginId(PluginEnum.SOFA.getName()));
+            selectorDTO.setPluginId("11");
             selectorDTO.setHandle(appName);
         } else {
             //is divide
             DivideUpstream divideUpstream = buildDivideUpstream(uri);
             String handler = GsonUtils.getInstance().toJson(Collections.singletonList(divideUpstream));
             selectorDTO.setHandle(handler);
-            selectorDTO.setPluginId(getPluginId(PluginEnum.DIVIDE.getName()));
+            selectorDTO.setPluginId("5");
             upstreamCheckService.submit(selectorDTO.getName(), divideUpstream);
         }
         SelectorConditionDTO selectorConditionDTO = new SelectorConditionDTO();
@@ -369,18 +360,6 @@ public class SoulClientRegisterServiceImpl implements SoulClientRegisterService 
         return divideUpstream;
     }
 
-    private SpringCloudSelectorHandle buildSpringCloudSelectorHandle(final String serviceId) {
-        SpringCloudSelectorHandle selectorHandle = new SpringCloudSelectorHandle();
-        selectorHandle.setServiceId(serviceId);
-        return selectorHandle;
-    }
-
-    private String getPluginId(final String pluginName) {
-        final PluginDO pluginDO = pluginMapper.selectByName(pluginName);
-        Objects.requireNonNull(pluginDO);
-        return pluginDO.getId();
-    }
-
     private void registerRule(final String selectorId, final String path, final String rpcType, final String ruleName) {
         RuleDTO ruleDTO = new RuleDTO();
         ruleDTO.setSelectorId(selectorId);
@@ -399,7 +378,28 @@ public class SoulClientRegisterServiceImpl implements SoulClientRegisterService 
         }
         ruleConditionDTO.setParamValue(path);
         ruleDTO.setRuleConditions(Collections.singletonList(ruleConditionDTO));
-        ruleDTO.setHandle(JsonUtils.toJson(RpcTypeEnum.acquireByName(rpcType).ruleHandle(path)));
+        if (rpcType.equals(RpcTypeEnum.DUBBO.getName())) {
+            DubboRuleHandle dubboRuleHandle = new DubboRuleHandle();
+            dubboRuleHandle.setLoadBalance(LoadBalanceEnum.RANDOM.getName());
+            dubboRuleHandle.setRetries(0);
+            dubboRuleHandle.setTimeout(3000);
+            ruleDTO.setHandle(JsonUtils.toJson(dubboRuleHandle));
+        } else if (rpcType.equals(RpcTypeEnum.HTTP.getName())) {
+            DivideRuleHandle divideRuleHandle = new DivideRuleHandle();
+            divideRuleHandle.setLoadBalance(LoadBalanceEnum.RANDOM.getName());
+            divideRuleHandle.setRetry(0);
+            ruleDTO.setHandle(JsonUtils.toJson(divideRuleHandle));
+        } else if (rpcType.equals(RpcTypeEnum.SOFA.getName())) {
+            SofaRuleHandle sofaRuleHandle = new SofaRuleHandle();
+            sofaRuleHandle.setLoadBalance(LoadBalanceEnum.RANDOM.getName());
+            sofaRuleHandle.setRetries(0);
+            sofaRuleHandle.setTimeout(3000);
+            ruleDTO.setHandle(JsonUtils.toJson(sofaRuleHandle));
+        } else {
+            SpringCloudRuleHandle springCloudRuleHandle = new SpringCloudRuleHandle();
+            springCloudRuleHandle.setPath(path);
+            ruleDTO.setHandle(JsonUtils.toJson(springCloudRuleHandle));
+        }
         ruleService.register(ruleDTO);
     }
 }
